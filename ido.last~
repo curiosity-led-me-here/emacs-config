@@ -1,0 +1,41 @@
+;;; -*- coding: utf-8 -*-
+
+;; ----- ido-last-directory-list -----
+(
+ ("/Users/" . "ashu/")
+ ("/Users/ashu/" . "Cpp/")
+)
+
+;; ----- ido-work-directory-list -----
+(
+ "/Users/ashu/Cpp/"
+ "/Users/ashu/Hamming-Code/"
+)
+
+;; ----- ido-work-file-list -----
+(
+ "matrix.cpp"
+ "matrixlib.cpp"
+ "expt.cpp"
+ "matrixlib"
+ "temp.cpp"
+ "temp"
+ "functions.cpp"
+ ".gitignore"
+ "main.cpp"
+ "day3.cpp"
+)
+
+;; ----- ido-dir-file-cache -----
+(
+ ("/Users/ashu/Cpp/" (27246 16447 291240 394000) ".gitignore~" "matrix" "#main.cpp#" "matrixlib.cpp" "main" "functions.cpp" "matrixlib" ".git/" "temp.cpp~" "matrix.cpp" ".gitignore" "matrix.cpp~" "README.md" "expt" "expt.cpp" "main.cpp~" "hamming.cpp" "matrixlib.cpp~" "expt.cpp~" "temp" "temp.cpp" "../" "./")
+
+ ("/Users/ashu/Hamming-Code/" (27244 62032 944233 14000) "matrixlib.cpp" "../" "./")
+
+ ("/Users/ashu/" (27245 40093 566182 241000) "option_chain.sh" "Hamming-Code/" ".zsh_sessions/" ".viminfo" ".bash_history" "dhanAPI.py" ".gitconfig" "gpt_generated.py" ".emacs.local/" ".cache/" ".python_history" "Downloads/" "import pyautogui.py" ".bash_profile" "main.py" ".vscode/" ".claude.json" ".mysql_history" "Documents/" ".npm/" ".keras/" ".jupyter/" ".Trash/" "comps.numbers" ".emacs~" "Terminal.zip" "Applications/" ".emacs" "Movies/" ".ssh/" "base_env/" "Option_slave/" "Cpp/" ".mylogin.cnf" "practice_python/" "Public/" ".codex/" "temp_underlying.png" ".emacs.d/" ".emacs.custom.el~" ".oracle_jre_usage/" "options_data_processed.py" ".lesshst" "from snapi_py_client.py" ".matplotlib/" "Library/" "Desktop/" ".ipython/" ".zsh_history" "Terminal/" "Dependencies/" ".claude/" "Fire Emblem/" "Dependencies\\all_instrument 2026-04-02.csv" ".zprofile" "position_sizing.py" "Pictures/" "projects/" ".local/" "option_chaining.sh" ".streamlit/" ".emacs.custom.el" ".zshrc" ".venv312/" ".vnc/" "badminton.py" "expt.py" ".bash_profile.save" "autohunt.py" "test/" ".CFUserTextEncoding" "pipeline.sql" "requirements.txt" ".vscode-shared/" "import time.py" ".DS_Store" "simple script.py" ".copilot/" ".my.cnf" "ChatInsights/" "Music/" ".config/" "pos.py" "plots_summary.xlsx" "../" "./")
+
+ ("/Users/" (26807 30308 318870 798000) "ashu/" "Shared/" ".localized" "../" "./")
+)
+
+;; ----- ido-unc-hosts-cache -----
+t

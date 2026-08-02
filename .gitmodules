@@ -1,0 +1,6 @@
+[submodule "site-lisp/simpc-mode"]
+	path = site-lisp/simpc-mode
+	url = https://github.com/rexim/simpc-mode.git
+[submodule "site-lisp/symbols-outline"]
+	path = site-lisp/symbols-outline
+	url = https://github.com/liushihao456/symbols-outline.el
