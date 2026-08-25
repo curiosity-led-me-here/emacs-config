@@ -15,9 +15,6 @@
 (tool-bar-mode -1)
 (scroll-bar-mode -1)
 
-;; Start maximized
-(add-to-list 'default-frame-alist '(fullscreen . maximized))
-
 ;; Dark built-in theme
 (load-theme 'modus-vivendi t)
 

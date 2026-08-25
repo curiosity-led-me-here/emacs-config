@@ -2,38 +2,97 @@
 
 ;; ----- ido-last-directory-list -----
 (
+ ("/Users/ashu/.local/" . "share/")
+ ("/Users/ashu/Stochesia/map_tile_library/" . "src/")
+ ("/Users/ashu/Stochesia/" . "src/")
+ ("/Users/ashu/Strategic-Procedural-Generation/map_tile_library/" . "include/")
+ ("/Users/ashu/Strategic-Procedural-Generation/fe_map_builder_api/recipes/" . "showcase/")
+ ("/Users/ashu/Strategic-Procedural-Generation/fe_map_builder_api/" . "recipes/")
+ ("/Users/ashu/Strategic-Procedural-Generation/" . "src/")
  ("/" . "Users/")
  ("/Users/" . "ashu/")
- ("/Users/ashu/" . "Cpp/")
+ ("/Users/ashu/" . "Stochesia/")
 )
 
 ;; ----- ido-work-directory-list -----
 (
+ "/Users/ashu/Stochesia/src/"
+ "/Users/ashu/Stochesia/"
+ "/Users/ashu/.emacs.d/"
  "/Users/ashu/"
+ "/Users/ashu/Stochesia/include/"
+ "/Users/ashu/Stochesia/map_tile_library/src/"
+ "/Users/ashu/Stochesia/map_tile_library/include/"
+ "/Users/ashu/Strategic-Procedural-Generation/src/"
+ "/Users/ashu/Strategic-Procedural-Generation/include/"
+ "/Users/ashu/Strategic-Procedural-Generation/"
+ "/Users/ashu/Strategic-Procedural-Generation/map_tile_library/include/"
+ "/Users/ashu/Strategic-Procedural-Generation/map_tile_library/viewer/"
  "/Users/ashu/Cpp/"
+ "/Users/ashu/Strategic-Procedural-Generation/fe_map_builder_api/recipes/showcase/"
  "/"
  "/Users/ashu/Hamming-Code/"
 )
 
 ;; ----- ido-work-file-list -----
 (
+ "custom_maps.cpp"
+ "entity_data.cpp"
+ "click.cpp"
+ "general_pathtracing.cpp"
+ "custom_maps.cpp~"
+ "command.txt"
+ "custom.el"
  ".emacs"
- "matrixlib.cpp"
- "matrix.cpp"
- "expt.cpp"
- "matrixlib"
- "temp.cpp"
- "temp"
- "functions.cpp"
- ".gitignore"
- "main.cpp"
+ ".emacs.custom.el~"
+ "game_data.cpp"
 )
 
 ;; ----- ido-dir-file-cache -----
 (
- ("/Users/ashu/" (27247 30274 832793 851000) "option_chain.sh" "Hamming-Code/" ".zsh_sessions/" ".viminfo" ".bash_history" "dhanAPI.py" ".gitconfig" "gpt_generated.py" ".emacs.local/" ".cache/" ".python_history" "Downloads/" "import pyautogui.py" ".bash_profile" "main.py" ".vscode/" ".claude.json" ".mysql_history" "Documents/" ".npm/" ".keras/" ".jupyter/" ".Trash/" "comps.numbers" ".emacs~" "Terminal.zip" "Applications/" ".emacs" "Movies/" ".ssh/" "FE8/" "base_env/" "Option_slave/" "Cpp/" ".mylogin.cnf" "practice_python/" "Public/" ".codex/" "temp_underlying.png" ".emacs.d/" ".emacs.custom.el~" ".oracle_jre_usage/" "options_data_processed.py" ".lesshst" "from snapi_py_client.py" ".matplotlib/" "Library/" "Desktop/" ".ipython/" ".zsh_history" "Terminal/" "Dependencies/" ".claude/" "Fire Emblem/" "Dependencies\\all_instrument 2026-04-02.csv" ".zprofile" "position_sizing.py" "Pictures/" "projects/" ".local/" "option_chaining.sh" ".streamlit/" ".emacs.custom.el" ".zshrc" ".venv312/" ".vnc/" "badminton.py" "expt.py" ".bash_profile.save" "autohunt.py" "test/" ".CFUserTextEncoding" "pipeline.sql" "requirements.txt" ".vscode-shared/" "import time.py" ".DS_Store" "simple script.py" ".copilot/" ".my.cnf" "ChatInsights/" "Music/" ".config/" "pos.py" "plots_summary.xlsx" "../" "./")
+ ("/Users/ashu/Stochesia/src/" (27277 7751 179069 634000) "locator.cpp~" "#pathfinder.cpp#" "integration.cpp~" "custom_maps.cpp" "main.cpp" "general_pathtracing.cpp~" "maps.cpp~" "#entity_data.cpp#" "piece_config.cpp" "mechanics_ascii.cpp" "map_ascii.cpp" "entity_registry.cpp~" "locator.cpp" "mechanics.cpp~" "placement_algo.cpp~" "game_data.cpp" "entity_registry.cpp" "main.cpp~" "click.cpp~" ".#entity_data.cpp" "pathfinder.cpp~" "integration.cpp" "entity_data.cpp" "placement_algo.cpp" "general_pathtracing.cpp" "click.cpp" "game_data.cpp~" "pathfinder" "mechanics_ascii.cpp~" "pathfinder.cpp" "mechanics.cpp" "terrain_data.cpp" "maps.cpp" ".DS_Store" "custom_maps.cpp~" "piece_config.cpp~" "stock_intmaps.cpp" "units.cpp" "../" "./")
 
- ("/Users/ashu/Cpp/" (27247 20178 395060 84000) ".gitignore~" "matrix" "#main.cpp#" "matrixlib.cpp" "main" "functions.cpp" "matrixlib" ".git/" "temp.cpp~" "matrix.cpp" ".gitignore" "matrix.cpp~" "README.md" "expt" "expt.cpp" "main.cpp~" "hamming.cpp" "matrixlib.cpp~" "expt.cpp~" "temp" "temp.cpp" "../" "./")
+ ("/Users/ashu/Stochesia/" (27276 19371 754517 983000) "src/" "command.txt" "Mechanics.pdf" "placement_algo" "main" ".git/" "exe/" "fe_map_builder_api/" "map_tile_library/" ".gitignore" "a.out" "unit_sprites.txt" "img/" "README.md" "stochesia" "click" "tests/" "proc_gen" "custom_maps" "include/" "custom_map" "placement_algo_window" "command.txt~" ".DS_Store" "procedural_gen" ".clangd" "../" "./")
+
+ ("/Users/ashu/.emacs.d/" (27274 64691 173196 81000) ".git/" "elpa/" "site-lisp/" "init.el" "auto-save-list/" ".gitmodules" "custom.el" "ido.last~" ".DS_Store" "tutorial/" "init.el~" "ido.last" "../" "./")
+
+ ("/Users/ashu/.emacs.local/" (27242 29873 74936 975000) "../" "./")
+
+ ("/Users/ashu/" (27274 64691 136544 783000) "option_chain.sh" "Hamming-Code/" "integration.txt" ".zsh_sessions/" ".viminfo" ".bash_history" "dhanAPI.py" ".gitconfig" "gpt_generated.py" ".emacs.local/" ".cache/" ".python_history" "Downloads/" "import pyautogui.py" ".bash_profile" "main.py" ".vscode/" ".claude.json" ".mysql_history" "Documents/" ".npm/" "expt.txxt.save" ".keras/" ".jupyter/" "Fe8-files/" ".Trash/" "comps.numbers" ".emacs~" "Terminal.zip" "try" "Applications/" ".emacs" "Movies/" ".ssh/" "FE8/" "base_env/" "Option_slave/" "Cpp/" ".mylogin.cnf" "FEBuilderGBA/" "practice_python/" "Public/" ".codex/" "temp_underlying.png" "paint.cpp" "tst.txt.save" ".emacs.d/" ".emacs.custom.el~" ".oracle_jre_usage/" "options_data_processed.py" ".lesshst" "Stochesia/" "from snapi_py_client.py" ".matplotlib/" "Library/" "Desktop/" ".ipython/" ".zsh_history" "Terminal/" "Dependencies/" ".claude/" "Fire Emblem/" "Dependencies\\all_instrument 2026-04-02.csv" ".zprofile" "test.cpp" "position_sizing.py" "Pictures/" "projects/" ".local/" "option_chaining.sh" ".streamlit/" "click.cpp" ".zshrc" ".venv312/" "test.cpp~" ".vnc/" "badminton.py" "expt.py" ".bash_profile.save" "autohunt.py" "test/" ".CFUserTextEncoding" "pipeline.sql" "requirements.txt" ".vscode-shared/" "FE5-GBABattleForecast/" "import time.py" ".DS_Store" "simple script.py" "try.cpp~" ".copilot/" ".my.cnf" "try.cpp" "paint.cpp~" "ChatInsights/" "Fire-Emblem-Tile-Map-Editor/" "Music/" ".config/" "pos.py" "paint" "plots_summary.xlsx" "../" "./")
+
+ ("/Users/ashu/Stochesia/include/" (27274 60431 452686 206000) "mechanics_ascii.h~" "general_pathtracing.h~" "units.h" "matrixlib.h" "click.h" "showcase_maps.h" "maps.h" "matrixlib.h~" "game_types.h~" "game_data.h~" "integration.h~" "pathfinder.h" "integration.h" "entity_registry.h~" "entity_data.h" "api.h" "game_data.cpp" "game_data.h" "mechanics.h" "map_ascii.h" "general_pathtracing.h" "mechanics.h~" "terrain_data.h" "game_types.h" "game_data.cpp~" "piece_config.h~" "piece_config.h" "click.h~" ".DS_Store" "mechanics_ascii.h" "mapmaker.h" "stock_intmaps.h" "placement_algo.h" "entity_registry.h" "placement_algo.h~" "../" "./")
+
+ ("/Users/ashu/.local/share/" (26444 517 931264 340000) "desktop-directories/" "mime/" "applications/" "icons/" "../" "./")
+
+ ("/Users/ashu/.local/" (27239 3875 242621 576000) "share/" "state/" "../" "./")
+
+ ("/Users/ashu/Stochesia/map_tile_library/include/" (27273 12033 227692 303000) "logic_render_control.h" "entity_animation.h" "occupancy_overlay.h" "sandbox_logic_bridge.h" "fe8_unit_data.h" "fe8_theme_categories.h" "map_monitor.h" "map_tile_library.h" "fe8_unit_visuals.h" "fe8_theme_ids.h" "../" "./")
+
+ ("/Users/ashu/Stochesia/fe_map_builder_api/" (27251 5691 912433 500000) "assets/" "data/" "examples/" "recipes/" ".gitignore" "README.md" "output/" "tests/" "include/" ".DS_Store" "tools/" "../" "./")
+
+ ("/Users/ashu/Stochesia/map_tile_library/" (27261 32988 416534 14000) "src/" "assets/" "data/" "layered_example" "reference_gameplay_maps/" "examples/" "reference_layouts/" "viewer/" "README.md" "include/" "build_example.sh" "layered_example.png" ".DS_Store" "monitor/" "tools/" "../" "./")
+
+ ("/Users/ashu/Stochesia/map_tile_library/src/" (27260 33676 672000 857000) "fe8_unit_data.cpp" "fe8_unit_visuals.cpp" "occupancy_overlay.cpp" "logic_render_control.cpp" "map_monitor.mm" "sandbox_logic_bridge.cpp" "map_tile_library.mm" "entity_animation.cpp" "../" "./")
+
+ ("/Users/ashu/Strategic-Procedural-Generation/src/" (27260 18970 845461 122000) "integration.cpp~" ".#main.cpp" "main.cpp" "general_pathtracing.cpp~" "#main.cpp#" "maps.cpp~" "mechanics_ascii.cpp" "map_ascii.cpp" "entity_registry.cpp~" "mechanics.cpp~" "integration.h" "game_data.cpp" "entity_registry.cpp" "main.cpp~" "pathfinder.cpp~" "integration.cpp" "entity_data.cpp" "general_pathtracing.cpp" "game_data.cpp~" "pathfinder" "mechanics_ascii.cpp~" "pathfinder.cpp" "mechanics.cpp" "terrain_data.cpp" "maps.cpp" ".DS_Store" "units.cpp" "../" "./")
+
+ ("/Users/ashu/Strategic-Procedural-Generation/include/" (27260 18759 189481 270000) "mechanics_ascii.h~" "general_pathtracing.h~" "units.h" "main.cpp" "matrixlib.h" "showcase_maps.h" "maps.h" "matrixlib.h~" "game_types.h~" "game_data.h~" "pathfinder.h" "entity_registry.h~" "entity_data.h" "api.h" "game_data.cpp" "game_data.h" "mechanics.h" "map_ascii.h" "general_pathtracing.h" "mechanics.h~" "terrain_data.h" "game_types.h" "game_data.cpp~" ".DS_Store" "mechanics_ascii.h" "mapmaker.h" "entity_registry.h" "../" "./")
+
+ ("/Users/ashu/Strategic-Procedural-Generation/" (27260 18289 396205 347000) "src/" "Mechanics.pdf" "main" ".git/" "sandbox.dSYM/" "Fe8-files/" "fe_map_builder_api/" "map_tile_library/" "sandbox" ".gitignore" "output/" "tests/" "path" "include/" ".DS_Store" ".clangd" "../" "./")
+
+ ("/Users/ashu/Strategic-Procedural-Generation/map_tile_library/include/" (27260 14999 612962 214000) "logic_render_control.h" "occupancy_overlay.h" "sandbox_logic_bridge.h" "map_tile_library.h" "fe8_theme_ids.h" "../" "./")
+
+ ("/Users/ashu/Strategic-Procedural-Generation/map_tile_library/viewer/" (27259 27116 541361 653000) "build/" "main.mm" "run_workbench.sh" "build_workbench.sh" "../" "./")
+
+ ("/Users/ashu/Strategic-Procedural-Generation/map_tile_library/" (27259 27014 533819 252000) "src/" "assets/" "data/" "layered_example" "examples/" "viewer/" "README.md" "include/" "build_example.sh" "layered_example.png" "tools/" "../" "./")
+
+ ("/Users/ashu/Cpp/" (27253 63939 569876 999000) ".gitignore~" "matrix" "#main.cpp#" "matrixlib.cpp" "main" "functions.cpp" "matrixlib" ".git/" "temp.cpp~" "matrix.cpp" ".gitignore" "matrix.cpp~" "README.md" "expt" "expt.cpp" "main.cpp~" "hamming.cpp" "matrixlib.cpp~" "expt.cpp~" ".DS_Store" "temp" "temp.cpp" "../" "./")
+
+ ("/Users/ashu/Strategic-Procedural-Generation/fe_map_builder_api/recipes/showcase/" (27251 4938 906367 378000) "continental_campaign.json" "continental_campaign.h~" "continental_campaign.h" "../" "./")
+
+ ("/Users/ashu/Strategic-Procedural-Generation/fe_map_builder_api/recipes/" (27251 4258 849384 838000) "showcase/" "fe8/" "README.md" ".DS_Store" "../" "./")
+
+ ("/Users/ashu/Strategic-Procedural-Generation/fe_map_builder_api/" (27251 3778 584061 96000) "assets/" "data/" "examples/" "recipes/" ".gitignore" "README.md" "output/" "include/" ".DS_Store" "tools/" "../" "./")
 
  ("/Users/ashu/Hamming-Code/" (27244 62032 944233 14000) "matrixlib.cpp" "../" "./")
 

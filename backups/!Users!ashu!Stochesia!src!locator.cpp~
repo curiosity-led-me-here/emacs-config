@@ -1,0 +1,14 @@
+#include "game_data.h"
+#include "integration.h"
+#include "entity_data.h"
+#include "entity_animation.h"
+#include "map_monitor.h"
+#include "maps.h"
+#include <cstdlib>
+
+std::vector<std::vector<int>> PlaceUnits(Environment& env)
+{
+    int unit_count = env.units().live_units().size();
+    
+    
+}

@@ -1,0 +1,877 @@
+#import <Cocoa/Cocoa.h>
+
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstdint>
+#include <fstream>
+#include <memory>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+#include "map_tile_library.h"
+#include "occupancy_overlay.h"
+
+namespace
+{
+constexpr int kRows = 12;
+constexpr int kColumns = 18;
+constexpr int kFirstTheme = 1;
+constexpr int kLastTheme = 72;
+constexpr CGFloat kSidebarWidth = 310.0;
+constexpr CGFloat kMargin = 22.0;
+// FE8's source canvas is two terrain tiles wide. In this generator workbench
+// we render it at 85% so large classes such as Paladin read as occupying their
+// own logical tile rather than visually spilling across neighbours.
+constexpr CGFloat kUnitCanvasInTiles = 1.70;
+
+struct PaletteColor
+{
+    std::uint8_t r;
+    std::uint8_t g;
+    std::uint8_t b;
+};
+
+using Palette = std::array<PaletteColor, 16>;
+
+const char* class_name(int tile_class)
+{
+    switch (tile_class)
+    {
+        case fe_tiles::PLAIN: return "PLAIN";
+        case fe_tiles::FOREST: return "FOREST";
+        case fe_tiles::MOUNTAIN: return "MOUNTAIN";
+        case fe_tiles::PEAK: return "PEAK";
+        case fe_tiles::ROAD: return "ROAD";
+        case fe_tiles::RIVER: return "RIVER";
+        case fe_tiles::WATER: return "WATER";
+        case fe_tiles::LAKE: return "LAKE";
+        case fe_tiles::BRIDGE: return "BRIDGE";
+        case fe_tiles::FORT: return "FORT";
+        case fe_tiles::VILLAGE: return "VILLAGE";
+        case fe_tiles::HOUSE: return "HOUSE";
+        case fe_tiles::WALL: return "WALL";
+        default: return "OTHER";
+    }
+}
+
+// An in-memory map recipe plus the literal TileCanvas built from it.
+// No PNG is written anywhere by this program.
+struct Workshop
+{
+    std::string root;
+    int theme = fe_tiles::THEME_CHAPTERS_01;
+    int selected_class = fe_tiles::PLAIN;
+    int selected_subclass = 0;
+    int selected_orientation = 0;
+    // The catalogue lives on disk. These are refreshed only when the user
+    // changes a selection, never from drawRect()/the 60 Hz timer.
+    int selected_subclass_count = 0;
+    int selected_orientation_count = 0;
+    fe_tiles::IntGrid classes;
+    fe_tiles::IntGrid visuals;
+    // This is the second, gameplay-shaped layer: 0 = empty; all other values
+    // are entity IDs. It is intentionally independent of terrain visuals.
+    fe_tiles::OccupancyGrid occupancy;
+    fe_tiles::SpriteLayer sprites;
+    std::unique_ptr<fe_tiles::TileCanvas> canvas;
+    std::string status;
+
+    explicit Workshop(std::string library_root)
+        : root(std::move(library_root)),
+          classes(kRows, std::vector<int>(kColumns, fe_tiles::PLAIN)),
+          visuals(kRows, std::vector<int>(kColumns, fe_tiles::make_tile_code(0, 0))),
+          occupancy(kRows, std::vector<int>(kColumns, 0)),
+          sprites(occupancy)
+    {
+        build_starter_map();
+        add_sample_units();
+        redraw();
+    }
+
+    int subclass_total(int tile_class) const
+    {
+        return fe_tiles::subclass_count(theme, tile_class, root);
+    }
+
+    bool choose_class(int tile_class)
+    {
+        if (subclass_total(tile_class) <= 0)
+        {
+            status = std::string("That class does not exist in theme ") +
+                     std::to_string(theme) + ".";
+            return false;
+        }
+        selected_class = tile_class;
+        selected_subclass = 0;
+        selected_orientation = 0;
+        normalize_selection();
+        status = "Selected " + std::string(class_name(selected_class)) + ".";
+        return true;
+    }
+
+    bool choose_first_available_class()
+    {
+        for (int candidate = fe_tiles::PLAIN; candidate <= fe_tiles::VILLAGE_HOUSE;
+             ++candidate)
+        {
+            if (subclass_total(candidate) > 0)
+            {
+                selected_class = candidate;
+                selected_subclass = 0;
+                selected_orientation = 0;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void normalize_selection()
+    {
+        selected_subclass_count = subclass_total(selected_class);
+        if (selected_subclass_count <= 0)
+        {
+            if (!choose_first_available_class())
+            {
+                throw std::runtime_error("This theme contains no drawable tile classes.");
+            }
+            selected_subclass_count = subclass_total(selected_class);
+        }
+
+        selected_subclass = std::clamp(selected_subclass, 0, selected_subclass_count - 1);
+        selected_orientation_count = fe_tiles::orientation_count(
+            theme, selected_class, selected_subclass, root
+        );
+        if (selected_orientation_count <= 0)
+        {
+            throw std::runtime_error("Selected class/subclass has no orientations.");
+        }
+        selected_orientation = std::clamp(selected_orientation, 0, selected_orientation_count - 1);
+    }
+
+    void redraw()
+    {
+        try
+        {
+            normalize_selection();
+            auto next = std::make_unique<fe_tiles::TileCanvas>(kRows, kColumns);
+            next->draw(theme, classes, visuals, root);
+            canvas = std::move(next);
+            if (status.empty())
+            {
+                status = "Ready. Click the board to paint a literal FE8 source tile.";
+            }
+        }
+        catch (const std::exception& error)
+        {
+            status = std::string("Render error: ") + error.what();
+        }
+    }
+
+    void fill_selected()
+    {
+        normalize_selection();
+        const int code = fe_tiles::make_tile_code(selected_subclass, selected_orientation);
+        for (std::vector<int>& row : classes)
+        {
+            std::fill(row.begin(), row.end(), selected_class);
+        }
+        for (std::vector<int>& row : visuals)
+        {
+            std::fill(row.begin(), row.end(), code);
+        }
+        status = "Filled the canvas with the selected literal tile.";
+        redraw();
+    }
+
+    void paint(int x, int y)
+    {
+        if (x < 0 || x >= kColumns || y < 0 || y >= kRows)
+        {
+            return;
+        }
+        normalize_selection();
+        classes[y][x] = selected_class;
+        visuals[y][x] = fe_tiles::make_tile_code(selected_subclass, selected_orientation);
+        std::ostringstream message;
+        message << "Painted {x=" << x << ", y=" << y << "}: "
+                << class_name(selected_class) << " / subclass "
+                << selected_subclass << " / orientation " << selected_orientation << ".";
+        status = message.str();
+        redraw();
+    }
+
+    void sample(int x, int y)
+    {
+        if (x < 0 || x >= kColumns || y < 0 || y >= kRows)
+        {
+            return;
+        }
+        selected_class = classes[y][x];
+        selected_subclass = fe_tiles::subclass_from_code(visuals[y][x]);
+        selected_orientation = fe_tiles::orientation_from_code(visuals[y][x]);
+        normalize_selection();
+        std::ostringstream message;
+        message << "Sampled {x=" << x << ", y=" << y << "}.";
+        status = message.str();
+    }
+
+    void cycle_subclass(int delta)
+    {
+        normalize_selection();
+        if (selected_subclass_count <= 0)
+        {
+            return;
+        }
+        selected_subclass = (selected_subclass + delta + selected_subclass_count) % selected_subclass_count;
+        selected_orientation = 0;
+        normalize_selection();
+        status = "Changed subclass.";
+    }
+
+    void cycle_orientation(int delta)
+    {
+        normalize_selection();
+        if (selected_orientation_count <= 0)
+        {
+            return;
+        }
+        selected_orientation = (selected_orientation + delta + selected_orientation_count) % selected_orientation_count;
+        status = "Changed orientation variant.";
+    }
+
+    void change_theme(int delta)
+    {
+        int candidate = theme;
+        for (int tries = 0; tries < kLastTheme; ++tries)
+        {
+            candidate += delta;
+            if (candidate < kFirstTheme)
+            {
+                candidate = kLastTheme;
+            }
+            if (candidate > kLastTheme)
+            {
+                candidate = kFirstTheme;
+            }
+            theme = candidate;
+            if (choose_first_available_class())
+            {
+                fill_selected();
+                status = "Changed to theme " + std::to_string(theme) +
+                         " and reset the canvas to a compatible base tile.";
+                return;
+            }
+        }
+        status = "No drawable tile theme found.";
+    }
+
+    void build_starter_map()
+    {
+        // A small raw-tile sketch, deliberately not auto-oriented. The point
+        // of this workbench is to let your generator choose every integer.
+        for (int y = 1; y <= 4; ++y)
+        {
+            for (int x = 1; x <= 4; ++x)
+            {
+                classes[y][x] = fe_tiles::FOREST;
+            }
+        }
+        for (int y = 8; y <= 10; ++y)
+        {
+            for (int x = 12; x <= 16; ++x)
+            {
+                classes[y][x] = fe_tiles::PEAK;
+            }
+        }
+        for (int y = 0; y < kRows; ++y)
+        {
+            classes[y][9] = fe_tiles::LAKE;
+        }
+        classes[5][8] = fe_tiles::HOUSE;
+    }
+
+    void add_sample_units()
+    {
+        // These are deliberately entity IDs rather than visual IDs. In the
+        // bridge, exactly these cells will come from Mapmaker::occupancy.
+        occupancy[6][3] = 1;  // Eirika
+        occupancy[7][15] = 2; // Paladin
+        occupancy[2][5] = 3;  // Soldier
+        occupancy[3][14] = 4; // Soldier
+
+        sprites.register_unit(1, fe_tiles::UnitVisual::Eirika);
+        sprites.register_unit(2, fe_tiles::UnitVisual::Paladin);
+        sprites.register_unit(3, fe_tiles::UnitVisual::Soldier);
+        sprites.register_unit(4, fe_tiles::UnitVisual::Soldier);
+    }
+
+    bool play_demo_move()
+    {
+        if (sprites.is_animating())
+        {
+            status = "A unit is already moving.";
+            return false;
+        }
+        const auto origin = sprites.location_of(1);
+        if (!origin.has_value())
+        {
+            status = "Eirika (entity ID 1) is not in occupancy.";
+            return false;
+        }
+
+        // This demo exercises the exact public path contract: an ordered
+        // cardinal route. Replace this vector with your pathfinder's route
+        // when we wire the real Mapmaker object in.
+        const std::array<std::vector<fe_tiles::Cell>, 4> patterns = {{
+            {{1, 0}, {1, 0}, {0, 1}, {0, 1}},
+            {{-1, 0}, {-1, 0}, {0, -1}, {0, -1}},
+            {{0, 1}, {0, 1}, {1, 0}, {1, 0}},
+            {{0, -1}, {0, -1}, {-1, 0}, {-1, 0}},
+        }};
+        for (const std::vector<fe_tiles::Cell>& pattern : patterns)
+        {
+            std::vector<fe_tiles::Cell> route = {*origin};
+            fe_tiles::Cell next = *origin;
+            for (const fe_tiles::Cell& delta : pattern)
+            {
+                next = {next.x + delta.x, next.y + delta.y};
+                route.push_back(next);
+            }
+            if (sprites.begin_move(1, route))
+            {
+                status = "Animating entity 1 from the occupancy route at 60 Hz.";
+                return true;
+            }
+        }
+        status = "No clear demo route for entity 1.";
+        return false;
+    }
+
+    void tick_fe_frame()
+    {
+        sprites.tick_fe_frame();
+        const auto completed = sprites.take_completed_move();
+        if (!completed.has_value())
+        {
+            return;
+        }
+        // The app owns this demonstration occupancy layer. In the real
+        // adapter this exact hand-off is where Mapmaker's already-approved
+        // move will update its own occupancy and Entity::location instead.
+        occupancy[completed->from.y][completed->from.x] = 0;
+        occupancy[completed->to.y][completed->to.x] = completed->entity_id;
+        status = "Animation finished; occupancy was committed by the app.";
+    }
+};
+
+NSImage* make_canvas_image(const fe_tiles::TileCanvas& canvas)
+{
+    const int width = canvas.pixel_width();
+    const int height = canvas.pixel_height();
+    unsigned char* pixels = const_cast<unsigned char*>(canvas.rgba().data());
+    NSBitmapImageRep* representation = [[NSBitmapImageRep alloc]
+        initWithBitmapDataPlanes:&pixels
+        pixelsWide:width
+        pixelsHigh:height
+        bitsPerSample:8
+        samplesPerPixel:4
+        hasAlpha:YES
+        isPlanar:NO
+        colorSpaceName:NSDeviceRGBColorSpace
+        bitmapFormat:NSBitmapFormatThirtyTwoBitBigEndian
+        bytesPerRow:width * 4
+        bitsPerPixel:32];
+    if (representation == nil)
+    {
+        return nil;
+    }
+    NSImage* image = [[NSImage alloc] initWithSize:NSMakeSize(width, height)];
+    [image addRepresentation:representation];
+    return image;
+}
+
+NSImage* load_image(const std::string& path)
+{
+    return [[NSImage alloc] initWithContentsOfFile:[NSString stringWithUTF8String:path.c_str()]];
+}
+
+Palette load_gba_palette(const std::string& path)
+{
+    std::ifstream file(path, std::ios::binary);
+    if (!file)
+    {
+        throw std::runtime_error("Could not open FE8 map-unit palette: " + path);
+    }
+    Palette palette{};
+    for (PaletteColor& color : palette)
+    {
+        unsigned char low = 0;
+        unsigned char high = 0;
+        file.read(reinterpret_cast<char*>(&low), 1);
+        file.read(reinterpret_cast<char*>(&high), 1);
+        if (!file)
+        {
+            throw std::runtime_error("FE8 map-unit palette is incomplete: " + path);
+        }
+        const std::uint16_t bgr555 = static_cast<std::uint16_t>(low) |
+                                     (static_cast<std::uint16_t>(high) << 8);
+        color.r = static_cast<std::uint8_t>(((bgr555 >> 0) & 31) * 255 / 31);
+        color.g = static_cast<std::uint8_t>(((bgr555 >> 5) & 31) * 255 / 31);
+        color.b = static_cast<std::uint8_t>(((bgr555 >> 10) & 31) * 255 / 31);
+    }
+    return palette;
+}
+
+int palette_distance(std::uint8_t r, std::uint8_t g, std::uint8_t b,
+                     const PaletteColor& palette_color)
+{
+    const int dr = static_cast<int>(r) - palette_color.r;
+    const int dg = static_cast<int>(g) - palette_color.g;
+    const int db = static_cast<int>(b) - palette_color.b;
+    return dr * dr + dg * dg + db * db;
+}
+
+// The asset extractor writes a colour-keyed GBA sprite sheet as opaque PNG.
+// Palette index 0 is the transparent colour; restore that alpha channel
+// before the workbench ever draws a unit frame.
+NSImage* restore_sprite_transparency(NSImage* source, const Palette& palette)
+{
+    NSRect proposed = NSMakeRect(0.0, 0.0, source.size.width, source.size.height);
+    CGImageRef image = [source CGImageForProposedRect:&proposed context:nil hints:nil];
+    if (image == nullptr)
+    {
+        return nil;
+    }
+    const std::size_t width = CGImageGetWidth(image);
+    const std::size_t height = CGImageGetHeight(image);
+    std::vector<std::uint8_t> pixels(width * height * 4, 0);
+    CGColorSpaceRef colors = CGColorSpaceCreateDeviceRGB();
+    CGContextRef context = CGBitmapContextCreate(
+        pixels.data(), width, height, 8, width * 4, colors,
+        kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big
+    );
+    CGColorSpaceRelease(colors);
+    if (context == nullptr)
+    {
+        return nil;
+    }
+    CGContextSetBlendMode(context, kCGBlendModeCopy);
+    CGContextDrawImage(context, CGRectMake(0.0, 0.0, width, height), image);
+
+    for (std::size_t pixel = 0; pixel < width * height; ++pixel)
+    {
+        std::uint8_t* rgba = pixels.data() + pixel * 4;
+        int closest = 0;
+        int distance = palette_distance(rgba[0], rgba[1], rgba[2], palette[0]);
+        for (int index = 1; index < 16; ++index)
+        {
+            const int candidate = palette_distance(rgba[0], rgba[1], rgba[2], palette[index]);
+            if (candidate < distance)
+            {
+                closest = index;
+                distance = candidate;
+            }
+        }
+        if (closest == 0)
+        {
+            rgba[0] = rgba[1] = rgba[2] = rgba[3] = 0;
+        }
+        else
+        {
+            // Reconstruct the original GBA palette exactly; this avoids small
+            // PNG conversion shifts at the edge of an opaque sprite pixel.
+            rgba[0] = palette[closest].r;
+            rgba[1] = palette[closest].g;
+            rgba[2] = palette[closest].b;
+            rgba[3] = 255;
+        }
+    }
+    CGImageRef fixed_image = CGBitmapContextCreateImage(context);
+    CGContextRelease(context);
+    NSImage* result = [[NSImage alloc] initWithCGImage:fixed_image size:source.size];
+    CGImageRelease(fixed_image);
+    return result;
+}
+
+NSString* visual_key(fe_tiles::UnitVisual visual)
+{
+    switch (visual)
+    {
+        case fe_tiles::UnitVisual::Eirika: return @"Eirika";
+        case fe_tiles::UnitVisual::Paladin: return @"Paladin";
+        case fe_tiles::UnitVisual::Soldier: return @"Soldier";
+    }
+}
+
+NSFont* title_font()
+{
+    return [NSFont systemFontOfSize:22.0 weight:NSFontWeightBold];
+}
+
+void draw_text(NSString* text, NSPoint point, NSFont* font, NSColor* color)
+{
+    NSDictionary* attributes = @{
+        NSFontAttributeName: font,
+        NSForegroundColorAttributeName: color,
+    };
+    [text drawAtPoint:point withAttributes:attributes];
+}
+}
+
+@interface MapWorkbenchView : NSView
+{
+    std::unique_ptr<Workshop> _workshop;
+    NSImage* _canvasImage;
+    NSMutableDictionary<NSString*, NSImage*>* _unitSheets;
+    NSRect _boardRect;
+    CGFloat _cellPixels;
+    NSTimer* _timer;
+}
+- (instancetype)initWithFrame:(NSRect)frame libraryRoot:(std::string)root;
+@end
+
+@implementation MapWorkbenchView
+
+- (instancetype)initWithFrame:(NSRect)frame libraryRoot:(std::string)root
+{
+    self = [super initWithFrame:frame];
+    if (self)
+    {
+        _workshop = std::make_unique<Workshop>(std::move(root));
+        _canvasImage = _workshop->canvas ? make_canvas_image(*_workshop->canvas) : nil;
+        const std::string fe8_root = FE8_SOURCE_ROOT;
+        const std::string sprite_root = fe8_root + "/graphics/unit_icon/move/";
+        const Palette player_palette = load_gba_palette(
+            fe8_root + "/graphics/unit_icon/palette/unit_icon_pal_player.agbpal"
+        );
+        _unitSheets = [[NSMutableDictionary alloc] init];
+        _unitSheets[@"Eirika"] = restore_sprite_transparency(
+            load_image(sprite_root + "unit_icon_move_Eirika_Lord_sheet.png"), player_palette);
+        _unitSheets[@"Paladin"] = restore_sprite_transparency(
+            load_image(sprite_root + "unit_icon_move_Paladin_sheet.png"), player_palette);
+        _unitSheets[@"Soldier"] = restore_sprite_transparency(
+            load_image(sprite_root + "unit_icon_move_Soldier_sheet.png"), player_palette);
+        if (_unitSheets[@"Eirika"] == nil || _unitSheets[@"Paladin"] == nil ||
+            _unitSheets[@"Soldier"] == nil)
+        {
+            @throw [NSException exceptionWithName:@"AssetError"
+                                           reason:@"Required FE8 map-unit sprite sheets could not be loaded."
+                                         userInfo:nil];
+        }
+        _cellPixels = 1.0;
+        _timer = [NSTimer scheduledTimerWithTimeInterval:(1.0 / 60.0)
+                                                   target:self
+                                                 selector:@selector(tick:)
+                                                 userInfo:nil
+                                                  repeats:YES];
+    }
+    return self;
+}
+
+- (BOOL)isFlipped
+{
+    return YES;
+}
+
+- (BOOL)acceptsFirstResponder
+{
+    return YES;
+}
+
+- (void)dealloc
+{
+    [_timer invalidate];
+}
+
+- (void)refreshCanvasImage
+{
+    _canvasImage = _workshop->canvas ? make_canvas_image(*_workshop->canvas) : nil;
+    [self setNeedsDisplay:YES];
+}
+
+- (void)layoutBoard
+{
+    const NSRect bounds = self.bounds;
+    const CGFloat availableWidth = std::max<CGFloat>(1.0, bounds.size.width - kSidebarWidth - 3.0 * kMargin);
+    const CGFloat availableHeight = std::max<CGFloat>(1.0, bounds.size.height - 2.0 * kMargin);
+    _cellPixels = std::floor(std::min(availableWidth / kColumns, availableHeight / kRows));
+    _cellPixels = std::max<CGFloat>(1.0, _cellPixels);
+    const CGFloat boardWidth = _cellPixels * kColumns;
+    const CGFloat boardHeight = _cellPixels * kRows;
+    _boardRect = NSMakeRect(kMargin, kMargin + (availableHeight - boardHeight) / 2.0,
+                            boardWidth, boardHeight);
+}
+
+- (void)drawUnit:(const fe_tiles::UnitPose&)pose
+{
+    NSImage* sheet = _unitSheets[visual_key(pose.visual)];
+    if (sheet == nil)
+    {
+        return;
+    }
+
+    // FE8's map-unit cells are 32×32 while terrain cells are 16×16. The game
+    // does *not* centre this 32×32 canvas in a map cell: its OAM origin is
+    // {-16, -32} around {tile.x * 16 + 8, tile.y * 16 + 16}. In other words,
+    // the canvas is horizontally centred and vertically bottom-anchored to
+    // the current terrain tile. Preserve that exact anchor at any scale.
+    const CGFloat frameSize = _cellPixels * kUnitCanvasInTiles;
+    const NSRect destination = NSMakeRect(
+                                          NSMinX(_boardRect) + (pose.x + 0.5) * _cellPixels - frameSize * 0.5,
+                                          NSMinY(_boardRect) + (pose.y + 1.0) * _cellPixels - frameSize,
+                                          frameSize, frameSize);
+    const NSRect source = NSMakeRect(0.0,
+                                     sheet.size.height - (pose.sheet_cell + 1) * 32.0,
+                                     32.0, 32.0);
+
+    [[NSGraphicsContext currentContext] setImageInterpolation:NSImageInterpolationNone];
+    [NSGraphicsContext saveGraphicsState];
+    if (pose.flip_x)
+    {
+        NSAffineTransform* flip = [NSAffineTransform transform];
+        [flip translateXBy:2.0 * NSMidX(destination) yBy:0.0];
+        [flip scaleXBy:-1.0 yBy:1.0];
+        [flip concat];
+    }
+    [sheet drawInRect:destination
+              fromRect:source
+             operation:NSCompositingOperationSourceOver
+              fraction:1.0
+        respectFlipped:YES
+                 hints:nil];
+    [NSGraphicsContext restoreGraphicsState];
+}
+
+- (void)drawUnits
+{
+    // SpriteLayer::poses() is already deduplicated by entity ID. A moving
+    // entity contributes its fractional animation pose only, never an extra
+    // static sprite at its old occupancy cell.
+    for (const fe_tiles::UnitPose& pose : _workshop->sprites.poses())
+    {
+        [self drawUnit:pose];
+    }
+}
+
+- (void)drawRect:(NSRect)dirtyRect
+{
+    [[NSColor colorWithCalibratedRed:0.035 green:0.05 blue:0.09 alpha:1.0] setFill];
+    NSRectFill(self.bounds);
+    [self layoutBoard];
+
+    if (_canvasImage != nil)
+    {
+        [[NSGraphicsContext currentContext] setImageInterpolation:NSImageInterpolationNone];
+        [_canvasImage drawInRect:_boardRect
+                        fromRect:NSMakeRect(0, 0, _canvasImage.size.width, _canvasImage.size.height)
+                       operation:NSCompositingOperationSourceOver
+                        fraction:1.0
+                  respectFlipped:YES
+                           hints:nil];
+    }
+    else
+    {
+        [[NSColor systemRedColor] set];
+        draw_text(@"No canvas could be rendered.", NSMakePoint(kMargin, kMargin),
+                  [NSFont systemFontOfSize:15], [NSColor systemRedColor]);
+    }
+
+    [self drawUnits];
+
+    [[NSColor colorWithWhite:1.0 alpha:0.16] setStroke];
+    NSBezierPath* border = [NSBezierPath bezierPathWithRect:_boardRect];
+    border.lineWidth = 1.0;
+    [border stroke];
+
+    const CGFloat sideX = NSMaxX(_boardRect) + kMargin;
+    NSColor* bright = [NSColor colorWithCalibratedWhite:0.94 alpha:1.0];
+    NSColor* muted = [NSColor colorWithCalibratedWhite:0.68 alpha:1.0];
+    NSColor* accent = [NSColor colorWithCalibratedRed:0.36 green:0.73 blue:1.0 alpha:1.0];
+
+    draw_text(@"FE8 Tile Workbench", NSMakePoint(sideX, 34), title_font(), bright);
+    draw_text(@"Terrain + occupancy · in memory", NSMakePoint(sideX, 65),
+              [NSFont systemFontOfSize:13], accent);
+
+    std::ostringstream selection;
+    selection << "Theme: " << _workshop->theme << "\n"
+              << "Class: " << class_name(_workshop->selected_class)
+              << " (" << _workshop->selected_class << ")\n"
+              << "Subclass: " << _workshop->selected_subclass << " / "
+              << std::max(0, _workshop->selected_subclass_count - 1) << "\n"
+              << "Orientation: " << _workshop->selected_orientation << " / "
+              << std::max(0, _workshop->selected_orientation_count - 1);
+    const std::string text = selection.str();
+    NSArray<NSString*>* selectionLines = [[NSString stringWithUTF8String:text.c_str()]
+        componentsSeparatedByString:@"\n"];
+    CGFloat y = 110;
+    for (NSString* line in selectionLines)
+    {
+        draw_text(line, NSMakePoint(sideX, y), [NSFont monospacedSystemFontOfSize:14 weight:NSFontWeightMedium], bright);
+        y += 24;
+    }
+
+    const std::array<NSString*, 10> instructions = {
+        @"Click            paint",
+        @"Right click      sample",
+        @"1–5             basic class",
+        @"[ / ]           subclass",
+        @"- / =           orientation",
+        @"Up / Down       chapter theme",
+        @"R               fill canvas",
+        @"Space           move Eirika",
+        @"Esc             quit",
+        @"",
+    };
+    y += 32;
+    draw_text(@"CONTROLS", NSMakePoint(sideX, y), [NSFont systemFontOfSize:12 weight:NSFontWeightBold], accent);
+    y += 26;
+    for (NSString* line : instructions)
+    {
+        draw_text(line, NSMakePoint(sideX, y), [NSFont monospacedSystemFontOfSize:12 weight:NSFontWeightRegular], muted);
+        y += 20;
+    }
+
+    draw_text(@"STATUS", NSMakePoint(sideX, y + 12), [NSFont systemFontOfSize:12 weight:NSFontWeightBold], accent);
+    const NSString* status = [NSString stringWithUTF8String:_workshop->status.c_str()];
+    const NSRect statusRect = NSMakeRect(sideX, y + 34, kSidebarWidth - kMargin, 110);
+    NSDictionary* statusAttributes = @{
+        NSFontAttributeName: [NSFont systemFontOfSize:12],
+        NSForegroundColorAttributeName: muted,
+    };
+    [status drawWithRect:statusRect options:NSStringDrawingUsesLineFragmentOrigin attributes:statusAttributes];
+}
+
+- (BOOL)cellFromEvent:(NSEvent*)event x:(int*)x y:(int*)y
+{
+    [self layoutBoard];
+    const NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
+    if (!NSPointInRect(point, _boardRect))
+    {
+        return NO;
+    }
+    *x = static_cast<int>((point.x - NSMinX(_boardRect)) / _cellPixels);
+    *y = static_cast<int>((point.y - NSMinY(_boardRect)) / _cellPixels);
+    return *x >= 0 && *x < kColumns && *y >= 0 && *y < kRows;
+}
+
+- (void)mouseDown:(NSEvent*)event
+{
+    int x = 0;
+    int y = 0;
+    if ([self cellFromEvent:event x:&x y:&y])
+    {
+        _workshop->paint(x, y);
+        [self refreshCanvasImage];
+    }
+}
+
+- (void)rightMouseDown:(NSEvent*)event
+{
+    int x = 0;
+    int y = 0;
+    if ([self cellFromEvent:event x:&x y:&y])
+    {
+        _workshop->sample(x, y);
+        [self setNeedsDisplay:YES];
+    }
+}
+
+- (void)keyDown:(NSEvent*)event
+{
+    if (event.keyCode == 53) // Escape
+    {
+        [NSApp terminate:nil];
+        return;
+    }
+    if (event.keyCode == 126) // up arrow
+    {
+        _workshop->change_theme(-1);
+        [self refreshCanvasImage];
+        return;
+    }
+    if (event.keyCode == 125) // down arrow
+    {
+        _workshop->change_theme(1);
+        [self refreshCanvasImage];
+        return;
+    }
+
+    const NSString* characters = event.charactersIgnoringModifiers;
+    if (characters.length == 0)
+    {
+        return;
+    }
+    const unichar key = [characters characterAtIndex:0];
+    bool needsCanvasRefresh = false;
+    switch (key)
+    {
+        case '1': _workshop->choose_class(fe_tiles::PLAIN); break;
+        case '2': _workshop->choose_class(fe_tiles::FOREST); break;
+        case '3': _workshop->choose_class(fe_tiles::PEAK); break;
+        case '4': _workshop->choose_class(fe_tiles::LAKE); break;
+        case '5': _workshop->choose_class(fe_tiles::HOUSE); break;
+        case '[': _workshop->cycle_subclass(-1); break;
+        case ']': _workshop->cycle_subclass(1); break;
+        case '-': _workshop->cycle_orientation(-1); break;
+        case '=': _workshop->cycle_orientation(1); break;
+        case 'r':
+        case 'R': _workshop->fill_selected(); needsCanvasRefresh = true; break;
+        case ' ': _workshop->play_demo_move(); break;
+        default: return;
+    }
+    if (needsCanvasRefresh)
+    {
+        [self refreshCanvasImage];
+    }
+    else
+    {
+        [self setNeedsDisplay:YES];
+    }
+}
+
+- (void)tick:(NSTimer*)timer
+{
+    _workshop->tick_fe_frame();
+    [self setNeedsDisplay:YES];
+}
+@end
+
+@interface WorkbenchAppDelegate : NSObject <NSApplicationDelegate>
+@end
+
+@implementation WorkbenchAppDelegate
+- (void)applicationDidFinishLaunching:(NSNotification*)notification
+{
+    const std::string root = FE_TILE_LIBRARY_ROOT;
+    NSRect frame = NSMakeRect(0, 0, 1320, 790);
+    NSWindow* window = [[NSWindow alloc]
+        initWithContentRect:frame
+        styleMask:(NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
+                   NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable)
+        backing:NSBackingStoreBuffered
+        defer:NO];
+    window.title = @"FE8 Tile Workbench";
+    window.minSize = NSMakeSize(920, 530);
+    MapWorkbenchView* view = [[MapWorkbenchView alloc] initWithFrame:frame libraryRoot:root];
+    window.contentView = view;
+    [window makeKeyAndOrderFront:nil];
+    [window makeFirstResponder:view];
+    [NSApp activateIgnoringOtherApps:YES];
+}
+@end
+
+int main()
+{
+    @autoreleasepool
+    {
+        NSApplication* app = [NSApplication sharedApplication];
+        WorkbenchAppDelegate* delegate = [[WorkbenchAppDelegate alloc] init];
+        app.delegate = delegate;
+        [app setActivationPolicy:NSApplicationActivationPolicyRegular];
+        [app run];
+    }
+    return 0;
+}
