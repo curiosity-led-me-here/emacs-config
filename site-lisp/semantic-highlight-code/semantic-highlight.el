@@ -347,7 +347,7 @@ Unknown modifiers remain available to the inspector but do not change color."
   (let ((buffer (current-buffer))
         (generation (cl-incf ashu-semantic--generation)))
     (setq ashu-semantic--timer
-          (run-with-idle-timer
+          (run-at-time
            ashu-semantic-idle-delay nil
            #'ashu-semantic--run-scheduled-refresh
            buffer generation))))
