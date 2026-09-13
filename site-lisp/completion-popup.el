@@ -1,27 +1,22 @@
-;;; completion-popup.el --- Automatic completion menu for code -*- lexical-binding: t; -*-
+;;; completion-popup.el --- Inline completion previews for code -*- lexical-binding: t; -*-
 
-;; Corfu presents candidates supplied by completion-at-point-functions.  In a
-;; simpc-mode buffer, Eglot registers clangd as that completion source, so the
-;; popup includes local variables, members, functions, types, and classes.
+;; Eglot registers clangd as a completion-at-point source in simpc-mode.  The
+;; built-in preview shows clangd's best variable, member, function, class, or
+;; type suggestion as faint text at point instead of opening a popup window.
 
-(require 'package)
-(package-initialize)
-(require 'corfu)
-(require 'corfu-auto)
+(require 'completion-preview)
 
-(setq corfu-auto t
-      corfu-auto-delay 0.15
-      corfu-auto-prefix 2
-      corfu-cycle t
-      corfu-preselect 'prompt)
+;; Corfu was previously enabled here.  Turn it off on reload so existing
+;; buffers immediately switch from its menu to the inline preview.
+(when (fboundp 'global-corfu-mode)
+  (global-corfu-mode -1))
 
-(global-corfu-mode 1)
+(setq completion-preview-minimum-symbol-length 2
+      completion-preview-idle-delay 0.15
+      completion-preview-exact-match-only nil
+      completion-preview-message-format nil)
 
-;; Keep completion feeling like a normal IDE: Tab accepts or expands the
-;; selected suggestion and Return accepts a highlighted suggestion.
-(define-key corfu-map (kbd "TAB") #'corfu-complete)
-(define-key corfu-map [tab] #'corfu-complete)
-(define-key corfu-map (kbd "RET") #'corfu-insert)
+(global-completion-preview-mode 1)
 
 (provide 'completion-popup)
 ;;; completion-popup.el ends here

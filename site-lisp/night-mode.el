@@ -33,7 +33,7 @@
        (not buffer-read-only)))
 
 (defun ashu-night--enable-current-buffer ()
-  "Apply Night mode to the current buffer, preserving its prior state."
+  "Apply the monochrome Night mode to the current buffer."
   (when (ashu-night--editable-file-buffer-p)
     (setq-local ashu-night--active t)
     (when font-lock-mode
@@ -81,6 +81,11 @@
 ;; Eglot hook catches C/C++ buffers whose semantic highlighter starts later.
 (add-hook 'after-change-major-mode-hook #'ashu-night--apply-to-current-buffer t)
 (add-hook 'eglot-managed-mode-hook #'ashu-night--apply-to-current-buffer t)
+
+;; Reapply the active Night setting when this file is evaluated, including in
+;; buffers that were already open before the reload.
+(when ashu-night-mode
+  (ashu-night--apply-to-all-buffers))
 
 (provide 'night-mode)
 ;;; night-mode.el ends here
