@@ -1,0 +1,2 @@
+;; Generated package description from corfu.el  -*- mode: lisp-data; no-byte-compile: t; lexical-binding:t -*-
+(define-package "corfu" "2.15" "COmpletion in Region FUnction" '((emacs "29.1") (compat "31")) :commit "4303506204bdf5df8f5e7d1457f6fca465a4da8e" :authors '(("Daniel Mendler" . "mail@daniel-mendler.de")) :maintainer '("Daniel Mendler" . "mail@daniel-mendler.de") :keywords '("abbrev" "convenience" "matching" "completion" "text") :url "https://github.com/minad/corfu")
